@@ -11,23 +11,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout del código
-        uses: actions/checkout@v2
+      - name: Checkout código
+        uses: actions/checkout@v3
 
-      - name: Configurar Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
-
-      - name: Instalar dependencias
-        run: pip install -r requirements.txt
-
-      - name: Ejecutar tests
-        run: pytest
+      # ... acá van los steps de build, test, etc.
 
       - name: Notificar a Slack
         if: always()
         run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            MESSAGE="✅ Build exitosa y código subido 🧑‍💻"
+          else
+            MESSAGE="❌ Build fallida. Necesita atención 🧑‍💻"
+          fi
+
           curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"✅ Workflow ejecutado en GitHub Actions"}' \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
+            --data "{\"text\":\"${MESSAGE}\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
