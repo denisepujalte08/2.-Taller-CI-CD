@@ -7,22 +7,37 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout código
+      - name: Checkout del código
         uses: actions/checkout@v3
 
-      # ... acá van los steps de build, test, etc.
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+
+      - name: Ejecutar pruebas
+        run: |
+          echo "Acá irían tus tests si los agregás con pytest"
+
+      - name: Deploy automático a Render
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
 
       - name: Notificar a Slack
         if: always()
         run: |
           if [ "${{ job.status }}" == "success" ]; then
-            MESSAGE="✅ Build exitosa y código subido 🧑‍💻"
+            MESSAGE="✅ Build exitosa y deploy hecho en Render "
           else
-            MESSAGE="❌ Build fallida. Necesita atención 🧑‍💻"
+            MESSAGE="❌ Build fallida. Revisar errores "
           fi
 
           curl -X POST -H 'Content-type: application/json' \
