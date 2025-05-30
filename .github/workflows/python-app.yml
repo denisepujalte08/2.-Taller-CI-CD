@@ -23,9 +23,9 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Ejecutar pruebas
+      - name: Ejecutar tests con pytest
         run: |
-          echo "Acá irían tus tests si los agregás con pytest"
+          pytest
 
       - name: Deploy automático a Render
         run: |
