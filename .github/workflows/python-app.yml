@@ -48,6 +48,39 @@ jobs:
             --data "{\"text\":\"${MESSAGE}\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
+      - name: Mover tarjeta Trello según commit
+        if: github.event_name == 'push'
+        run: |
+          # Recorre todos los commits del push
+          echo '${{ toJson(github.event.commits) }}' | jq -c '.[]' | while read commit; do
+            MSG=$(echo "$commit" | jq -r '.message')
+            # Busca patrón: número| #done o número| #doing
+            if [[ "$MSG" =~ ^([0-9]+)\|[[:space:]]*#(done|doing) ]]; then
+              CARD_NUMBER="${BASH_REMATCH[1]}"
+              STATUS="${BASH_REMATCH[2]}"
+              # Busca la tarjeta por nombre que empieza con el número y |
+              CARD_ID=$(curl -s "https://api.trello.com/1/boards/${{ secrets.TRELLO_BOARD_ID }}/cards?key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}" | jq -r ".[] | select(.name | test(\"^$CARD_NUMBER\\\\|\")) | .id")
+              if [ -n "$CARD_ID" ]; then
+                if [ "$STATUS" = "done" ]; then
+                  LIST_ID="${{ secrets.TRELLO_DONE_LIST_ID }}"
+                else
+                  LIST_ID="${{ secrets.TRELLO_DOING_LIST_ID }}"
+                fi
+                # Mueve la tarjeta a la lista correspondiente
+                curl -s -X PUT "https://api.trello.com/1/cards/$CARD_ID?idList=$LIST_ID&key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}"
+                echo "Tarjeta $CARD_NUMBER movida a $STATUS"
+              else
+                echo "No se encontró tarjeta para $CARD_NUMBER"
+              fi
+            fi
+          done
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_DOING_LIST_ID: ${{ secrets.TRELLO_DOING_LIST_ID }}
+          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+
   sonarcloud:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
