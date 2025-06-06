@@ -1,0 +1,22 @@
+name: Notificar commit a Slack
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obtener información del commit
+        id: commit_info
+        run: |
+          echo "AUTHOR=$(git log -1 --pretty=format:'%an')" >> $GITHUB_ENV
+          echo "MESSAGE=$(git log -1 --pretty=format:'%s')" >> $GITHUB_ENV
+
+      - name: Notificar a Slack
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"Nuevo commit por *${AUTHOR}*: ${MESSAGE}\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
