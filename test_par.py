@@ -1,11 +1,29 @@
-from par_api import es_par_logico
+from par import es_par_logico
 
 
-def test_es_par():
+def test_par_positivo():
     assert es_par_logico(2)
+
+
+def test_impar_positivo():
     assert not es_par_logico(3)
+
+
+def test_cero():
     assert es_par_logico(0)
-    assert es_par_logico(-2)         # Número negativo par
-    assert not es_par_logico(-3)     # Número negativo impar
-    assert es_par_logico(1000000)    # Número grande par
-    assert not es_par_logico(1000001)  # Número grande impar
+
+
+def test_par_negativo():
+    assert es_par_logico(-2)
+
+
+def test_impar_negativo():
+    assert not es_par_logico(-3)
+
+
+def test_par_grande():
+    assert es_par_logico(1000000)
+
+
+def test_impar_grande():
+    assert not es_par_logico(1000001)

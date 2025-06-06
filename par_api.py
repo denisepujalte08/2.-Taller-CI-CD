@@ -1,11 +1,7 @@
 from fastapi import FastAPI
-
+from par import es_par_logico
 
 app = FastAPI()
-
-
-def es_par_logico(numero: int) -> bool:
-    return numero % 2 == 0
 
 
 @app.get("/")
