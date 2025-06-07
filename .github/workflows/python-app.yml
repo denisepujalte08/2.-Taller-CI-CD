@@ -35,22 +35,21 @@ jobs:
             --data "{\"text\":\"❌ Falló Flake8:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Ejecutar tests con pytest y guardar salida
-        continue-on-error: true
+      - name: Ejecutar tests con pytest y notificar si fallan
         run: |
-          pytest --tb=short | tee pytest.log echo "${PIPESTATUS[0]}" > pytest_status
+          set +e  # Permite continuar incluso si pytest falla
+          pytest --tb=short > pytest.log
+          STATUS=$?
+          set -e  # Vuelve a cortar si hay errores después de esto
 
-      - name: Notificar error pytest en Slack
-        run: |
-          STATUS=$(cat pytest_status)
-          if [ "$STATUS" != "0" ]; then
+          if [ "$STATUS" -ne 0 ]; then
             ERROR_MSG=$(grep -A 5 -E 'FAILURES|ERRORS' pytest.log | head -20 | sed ':a;N;$!ba;s/\n/\\n/g')
             curl -X POST -H 'Content-type: application/json' \
               --data "{\"text\":\"❌ Falló un test en pytest:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
               ${{ secrets.SLACK_WEBHOOK_URL }}
             exit 1
           else
-            echo "✅ Todos los tests pasaron"
+            echo "✅ Tests pasaron correctamente"
             exit 0
           fi
 
