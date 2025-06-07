@@ -38,7 +38,7 @@ jobs:
       - name: Ejecutar tests con pytest y guardar salida
         continue-on-error: true
         run: |
-          pytest --tb=short > pytest.log; echo $? > pytest_status
+          pytest --tb=short | tee pytest.log echo "${PIPESTATUS[0]}" > pytest_status
 
       - name: Notificar error pytest en Slack
         run: |
