@@ -49,6 +49,9 @@ jobs:
               --data "{\"text\":\"❌ Falló un test en pytest:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
               ${{ secrets.SLACK_WEBHOOK_URL }}
             exit 1
+          else
+            echo "✅ Todos los tests pasaron"
+            exit 0
           fi
 
       - name: Deploy automático a Render
