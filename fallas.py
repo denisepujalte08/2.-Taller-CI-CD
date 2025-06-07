@@ -22,8 +22,3 @@ def no_usada():
 
 def test_algo():
     pass
-
-
-def hola():
-    x = 42
-    return "chau"
