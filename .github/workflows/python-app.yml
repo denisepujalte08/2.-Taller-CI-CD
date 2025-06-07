@@ -42,9 +42,9 @@ jobs:
       - name: Notificar error pytest en Slack
         if: failure()
         run: |
-          ERROR_MSG=$(grep -E 'FAILED|ERROR' pytest.log | head -5 | sed ':a;N;$!ba;s/\n/\\n/g')
+          ERROR_MSG=$(grep -A 5 -E 'FAILURES|ERRORS' pytest.log | head -20 | sed ':a;N;$!ba;s/\n/\\n/g')
           curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"❌ Falló un test:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
+            --data "{\"text\":\"❌ Falló un test en pytest:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Deploy automático a Render
