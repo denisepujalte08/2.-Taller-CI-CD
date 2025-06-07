@@ -37,15 +37,18 @@ jobs:
 
       - name: Ejecutar tests con pytest y guardar salida
         run: |
-          pytest --tb=short > pytest.log
+          pytest --tb=short > pytest.log; echo $? > pytest_status
 
       - name: Notificar error pytest en Slack
-        if: failure()
         run: |
-          ERROR_MSG=$(grep -A 5 -E 'FAILURES|ERRORS' pytest.log | head -20 | sed ':a;N;$!ba;s/\n/\\n/g')
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"❌ Falló un test en pytest:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS=$(cat pytest_status)
+          if [ "$STATUS" != "0" ]; then
+            ERROR_MSG=$(grep -A 5 -E 'FAILURES|ERRORS' pytest.log | head -20 | sed ':a;N;$!ba;s/\n/\\n/g')
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"❌ Falló un test en pytest:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
+              ${{ secrets.SLACK_WEBHOOK_URL }}
+            exit 1
+          fi
 
       - name: Deploy automático a Render
         run: |
