@@ -25,11 +25,27 @@ jobs:
 
       - name: Revisar estilo con Flake8
         run: |
-          flake8 . --max-line-length=88
+          flake8 . --max-line-length=88 > flake8.log || exit 1
 
-      - name: Ejecutar tests con pytest
+      - name: Notificar error Flake8 en Slack
+        if: failure() && steps.Revisar_estructura_con_Flake8.outcome == 'failure'
         run: |
-          pytest
+          ERROR_MSG=$(head -20 flake8.log | sed ':a;N;$!ba;s/\n/\\n/g')
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"❌ Falló Flake8:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Ejecutar tests con pytest y guardar salida
+        run: |
+          pytest --tb=short > pytest.log || exit 1
+
+      - name: Notificar error pytest en Slack
+        if: failure() && steps.Ejecutar_tests_con_pytest_y_guardar_salida.outcome == 'failure'
+        run: |
+          ERROR_MSG=$(grep -E 'FAILED|ERROR' pytest.log | head -5 | sed ':a;N;$!ba;s/\n/\\n/g')
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"❌ Falló un test:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Deploy automático a Render
         run: |
@@ -99,6 +115,14 @@ jobs:
           pip install -r requirements.txt
 
       - name: Analizar con SonarCloud
+        id: sonar
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Notificar error SonarCloud en Slack
+        if: failure() && steps.sonar.outcome == 'failure'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"❌ Falló el análisis de SonarCloud.\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}

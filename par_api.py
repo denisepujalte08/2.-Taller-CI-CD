@@ -11,7 +11,7 @@ def home():
 
 @app.get("/es_par")
 def es_par(numero: int):
+    resultado = "par" if es_par_logico(numero) else "impar"
     return {
-        "numero": numero,
-        "es_par": es_par_logico(numero)
+        "mensaje": f"El número {numero} es {resultado}."
     }
