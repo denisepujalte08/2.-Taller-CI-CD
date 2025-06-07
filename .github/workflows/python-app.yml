@@ -36,6 +36,7 @@ jobs:
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Ejecutar tests con pytest y guardar salida
+        continue-on-error: true
         run: |
           pytest --tb=short > pytest.log; echo $? > pytest_status
 
