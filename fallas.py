@@ -1,6 +1,6 @@
 # Romper Flake8
 def foo():
-    print("sin indentación")  # <-- mal indentado
+print("sin indentación")  # <-- mal indentado
 
 
 # Romper SonarCloud
