@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci-checks:
-    name: Python CI + Sonar + Trello + Slack
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -109,7 +109,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Desplegar a Render manualmente via API
+      - name: Despliegue
         run: |
           curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys \
             -H 'Accept: application/json' \
