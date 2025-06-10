@@ -54,6 +54,7 @@ jobs:
           fi
 
       - name: Deploy automático a Render
+        if: success()
         run: |
           curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
 
