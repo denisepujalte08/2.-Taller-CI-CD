@@ -24,6 +24,10 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Verificar instalación de httpx
+        run: |
+          pip show httpx
+
       - name: Revisar estilo con Flake8
         run: |
           flake8 . --max-line-length=88 > flake8.log
