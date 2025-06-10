@@ -66,6 +66,24 @@ jobs:
             --data "{\"text\":\"❌ Falló el análisis de SonarCloud.\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
+      - name: Esperar resultados de Quality Gate
+        run: |
+          sleep 20  # Espera a que SonarCloud procese el análisis
+
+      - name: Verificar estado de Quality Gate en SonarCloud
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          PROJECT_KEY="MariaSolGaray_TP-ICS"  # Cambia esto por el Project Key de SonarCloud si es diferente
+          STATUS=$(curl -s -u "${SONAR_TOKEN}:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=$MariaSolGaray_TP-ICS" | jq -r .projectStatus.status)
+          echo "Quality Gate status: $STATUS"
+          if [ "$STATUS" != "OK" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"❌ Quality Gate fallido en SonarCloud para $PROJECT_KEY. Estado: $STATUS\"}" \
+              ${{ secrets.SLACK_WEBHOOK_URL }}
+            exit 1
+          fi
+
       - name: Notificar a Slack
         if: always()
         run: |
