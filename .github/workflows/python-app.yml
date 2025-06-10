@@ -40,12 +40,15 @@ jobs:
             --data "{\"text\":\"❌ Falló Flake8:\n\`\`\`${ERROR_MSG}\`\`\`\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Ejecutar tests con pytest y notificar si fallan
+      - name: Ejecutar tests con coverage y notificar si fallan
         run: |
+          pip install coverage
           set +e
-          pytest --tb=short > pytest.log
+          coverage run -m pytest --tb=short > pytest.log
           STATUS=$?
           set -e
+
+          coverage xml
 
           if [ "$STATUS" -ne 0 ]; then
             ERROR_MSG=$(grep -A 5 -E 'FAILURES|ERRORS' pytest.log | head -20 | sed ':a;N;$!ba;s/\n/\\n/g')
@@ -55,6 +58,9 @@ jobs:
             exit 1
           else
             echo "✅ Tests pasaron correctamente"
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"✅ Todos los tests pasaron correctamente.\"}" \
+              ${{ secrets.SLACK_WEBHOOK_URL }}
             exit 0
           fi
 
