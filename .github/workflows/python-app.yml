@@ -54,6 +54,12 @@ jobs:
             exit 0
           fi
 
+      - name: Generar reporte de cobertura
+        run: |
+          pip install coverage
+          coverage run -m pytest
+          coverage xml
+
       - name: Analizar con SonarCloud
         uses: SonarSource/sonarcloud-github-action@master
         env:
