@@ -71,7 +71,7 @@ jobs:
           coverage xml
 
       - name: Analizar con SonarCloud
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -179,7 +179,7 @@ jobs:
         if: ${{ steps.check_render.outputs.status == 'live' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":" Despliegue exitoso en Render "}' \
+            --data '{"text":"✅ Despliegue exitoso en Render "}' \
             ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notificar despliegue fallido
