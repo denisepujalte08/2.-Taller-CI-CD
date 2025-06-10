@@ -53,11 +53,6 @@ jobs:
             exit 0
           fi
 
-      - name: Deploy automático a Render
-        if: success()
-        run: |
-          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-
       - name: Notificar a Slack
         if: always()
         run: |
@@ -133,3 +128,8 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data "{\"text\":\"❌ Falló el análisis de SonarCloud.\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Deploy automático a Render
+        if: ${{ success() && github.ref == 'refs/heads/main' }}
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
