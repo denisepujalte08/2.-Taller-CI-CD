@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci-checks:
-    name: Python CI Checks
+    name: Python CI + Sonar + Trello + Slack
     runs-on: ubuntu-latest
 
     steps:
@@ -38,10 +38,10 @@ jobs:
 
       - name: Ejecutar tests con pytest y notificar si fallan
         run: |
-          set +e  # Permite continuar incluso si pytest falla
+          set +e
           pytest --tb=short > pytest.log
           STATUS=$?
-          set -e  # Vuelve a cortar si hay errores después de esto
+          set -e
 
           if [ "$STATUS" -ne 0 ]; then
             ERROR_MSG=$(grep -A 5 -E 'FAILURES|ERRORS' pytest.log | head -20 | sed ':a;N;$!ba;s/\n/\\n/g')
@@ -54,71 +54,7 @@ jobs:
             exit 0
           fi
 
-      - name: Notificar a Slack
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            MESSAGE="✅ Build exitosa y despliegue hecho en Render "
-          else
-            MESSAGE="❌ Build fallida. Revisar errores "
-          fi
-
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"${MESSAGE}\"}" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Mover tarjeta Trello según commit
-        if: github.event_name == 'push'
-        run: |
-          # Recorre todos los commits del push
-          echo '${{ toJson(github.event.commits) }}' | jq -c '.[]' | while read commit; do
-            MSG=$(echo "$commit" | jq -r '.message')
-            # Busca patrón: número| #done o número| #doing
-            if [[ "$MSG" =~ ^([0-9]+)\|[[:space:]]*#(done|doing) ]]; then
-              CARD_NUMBER="${BASH_REMATCH[1]}"
-              STATUS="${BASH_REMATCH[2]}"
-              # Busca la tarjeta por nombre que empieza con el número y |
-              CARD_ID=$(curl -s "https://api.trello.com/1/boards/${{ secrets.TRELLO_BOARD_ID }}/cards?key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}" | jq -r ".[] | select(.name | test(\"^$CARD_NUMBER\\\\|\")) | .id")
-              if [ -n "$CARD_ID" ]; then
-                if [ "$STATUS" = "done" ]; then
-                  LIST_ID="${{ secrets.TRELLO_DONE_LIST_ID }}"
-                else
-                  LIST_ID="${{ secrets.TRELLO_DOING_LIST_ID }}"
-                fi
-                # Mueve la tarjeta a la lista correspondiente
-                curl -s -X PUT "https://api.trello.com/1/cards/$CARD_ID?idList=$LIST_ID&key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}"
-                echo "Tarjeta $CARD_NUMBER movida a $STATUS"
-              else
-                echo "No se encontró tarjeta para $CARD_NUMBER"
-              fi
-            fi
-          done
-        env:
-          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
-          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
-          TRELLO_DOING_LIST_ID: ${{ secrets.TRELLO_DOING_LIST_ID }}
-          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
-
-  sonarcloud:
-    name: SonarCloud Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout del código
-        uses: actions/checkout@v3
-
-      - name: Configurar Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Instalar dependencias
-        run: |
-          pip install -r requirements.txt
-
       - name: Analizar con SonarCloud
-        id: sonar
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -128,4 +64,87 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data "{\"text\":\"❌ Falló el análisis de SonarCloud.\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notificar a Slack
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            MESSAGE="✅ Build exitosa y lista para deploy"
+          else
+            MESSAGE="❌ Build fallida. Revisar errores"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"${MESSAGE}\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Mover tarjeta Trello según commit
+        if: github.event_name == 'push'
+        run: |
+          echo '${{ toJson(github.event.commits) }}' | jq -c '.[]' | while read commit; do
+            MSG=$(echo "$commit" | jq -r '.message')
+            if [[ "$MSG" =~ ^([0-9]+)\|[[:space:]]*#(done|doing) ]]; then
+              CARD_NUMBER="${BASH_REMATCH[1]}"
+              STATUS="${BASH_REMATCH[2]}"
+              CARD_ID=$(curl -s "https://api.trello.com/1/boards/${{ secrets.TRELLO_BOARD_ID }}/cards?key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}" | jq -r ".[] | select(.name | test(\"^$CARD_NUMBER\\\\|\")) | .id")
+              if [ -n "$CARD_ID" ]; then
+                if [ "$STATUS" = "done" ]; then
+                  LIST_ID="${{ secrets.TRELLO_DONE_LIST_ID }}"
+                else
+                  LIST_ID="${{ secrets.TRELLO_DOING_LIST_ID }}"
+                fi
+                curl -s -X PUT "https://api.trello.com/1/cards/$CARD_ID?idList=$LIST_ID&key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}"
+                echo "Tarjeta $CARD_NUMBER movida a $STATUS"
+              else
+                echo "No se encontró tarjeta para $CARD_NUMBER"
+              fi
+            fi
+          done
+
+  deploy:
+    name: Despliegue en Render
+    needs: ci-checks
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Desplegar a Render manualmente via API
+        run: |
+          curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys \
+            -H 'Accept: application/json' \
+            -H 'Authorization: Bearer ${{ secrets.RENDER_API_KEY }}' \
+            -d ''
+
+      - name: Verificar estado del despliegue en Render
+        id: check_render
+        run: |
+          for i in {1..10}; do
+            DEPLOY_STATUS=$(curl -s -X GET -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+              https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys | jq -r '.[0].deploy.status')
+
+            echo "Intento $i - Estado del despliegue: $DEPLOY_STATUS"
+
+            if [ "$DEPLOY_STATUS" == "live" ] || [ "$DEPLOY_STATUS" == "update_failed" ]; then
+              echo "status=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            sleep 30
+          done
+
+          echo "status=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
+
+      - name: Notificar despliegue exitoso
+        if: ${{ steps.check_render.outputs.status == 'live' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":" Despliegue exitoso en Render "}' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notificar despliegue fallido
+        if: ${{ steps.check_render.outputs.status == 'update_failed' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"⚠ El despliegue en Render falló. Revisar el dashboard."}' \
             ${{ secrets.SLACK_WEBHOOK_URL }}
