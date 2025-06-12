@@ -4,7 +4,7 @@ from par import es_par_logico
 app = FastAPI()
 
 
-@app.get("/es_par")
+@app.get("/")
 def home():
     return {"mensaje": "¡Hola desde FastAPI!"}
 
