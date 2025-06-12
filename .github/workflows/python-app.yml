@@ -80,7 +80,7 @@ jobs:
 
       - name: Esperar resultados de Quality Gate
         run: |
-          sleep 20  # Espera a que SonarCloud procese el análisis
+          sleep 30  # Espera a que SonarCloud procese el análisis
 
       - name: Verificar estado de Quality Gate en SonarCloud
         env:
@@ -93,7 +93,7 @@ jobs:
             if [ "$STATUS" != "null" ]; then
               break
             fi
-            sleep 15
+            sleep 10
           done
           if [ "$STATUS" != "OK" ]; then
             curl -X POST -H 'Content-type: application/json' \
@@ -166,7 +166,7 @@ jobs:
               exit 0
             fi
 
-            sleep 10
+            sleep 30
           done
 
           echo "status=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
