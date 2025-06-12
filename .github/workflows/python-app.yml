@@ -2,16 +2,17 @@ name: Python CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ] #esto es lo qe se va a ejecutar cuando se haga un push en la rama 'main'
+        #y solo esta rama
   pull_request:
     branches: [ main ]
 
-jobs:
+jobs: #estos son los flujos de trabajos
   ci-checks:
     name: Build
     runs-on: ubuntu-latest
 
-    steps:
+    steps: #ACA VAN TODOS LOS PASOS A EJECUTARSE
       - name: Checkout del código
         uses: actions/checkout@v3
 
@@ -23,7 +24,11 @@ jobs:
       - name: Instalar dependencias
         run: |
           pip install -r requirements.txt
-          
+
+#esto lo que hace es revisar los errores simples del codigo
+  #PEP 8: cantidad de caracteres, lineas, etc
+  # errores de programación comunes: variables no usadas, imports, etc
+  # también mide la complejidad del codigo
       - name: Revisar estilo con Flake8
         run: |
           flake8 . --max-line-length=88 > flake8.log
@@ -114,29 +119,7 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data "{\"text\":\"${MESSAGE}\"}" \
             ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Mover tarjeta Trello según commit
-        if: github.event_name == 'push'
-        run: |
-          echo '${{ toJson(github.event.commits) }}' | jq -c '.[]' | while read commit; do
-            MSG=$(echo "$commit" | jq -r '.message')
-            if [[ "$MSG" =~ ^([0-9]+)\|[[:space:]]*#(done|doing) ]]; then
-              CARD_NUMBER="${BASH_REMATCH[1]}"
-              STATUS="${BASH_REMATCH[2]}"
-              CARD_ID=$(curl -s "https://api.trello.com/1/boards/${{ secrets.TRELLO_BOARD_ID }}/cards?key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}" | jq -r ".[] | select(.name | test(\"^$CARD_NUMBER\\\\|\")) | .id")
-              if [ -n "$CARD_ID" ]; then
-                if [ "$STATUS" = "done" ]; then
-                  LIST_ID="${{ secrets.TRELLO_DONE_LIST_ID }}"
-                else
-                  LIST_ID="${{ secrets.TRELLO_DOING_LIST_ID }}"
-                fi
-                curl -s -X PUT "https://api.trello.com/1/cards/$CARD_ID?idList=$LIST_ID&key=${{ secrets.TRELLO_API_KEY }}&token=${{ secrets.TRELLO_TOKEN }}"
-                echo "Tarjeta $CARD_NUMBER movida a $STATUS"
-              else
-                echo "No se encontró tarjeta para $CARD_NUMBER"
-              fi
-            fi
-          done
+            
 
   deploy:
     name: Despliegue en Render
