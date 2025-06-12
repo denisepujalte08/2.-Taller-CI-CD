@@ -75,6 +75,8 @@ jobs: #estos son los flujos de trabajos
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          organization: denisepujalte08
 
       - name: Notificar error SonarCloud en Slack
         if: failure()
