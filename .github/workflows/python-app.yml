@@ -91,7 +91,7 @@ jobs: #estos son los flujos de trabajos
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          PROJECT_KEY="denisepujalte08_2.-Taller-CI-CD"
+          PROJECT_KEY="denisepujalte08_Taller_CICD"
           for i in {1..10}; do
             STATUS=$(curl -s -u "${SONAR_TOKEN}:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=$PROJECT_KEY" | jq -r .projectStatus.status)
             echo "Intento $i - Quality Gate status: $STATUS"
